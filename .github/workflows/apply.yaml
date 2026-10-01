@@ -17,6 +17,8 @@ env:
 jobs:
   plan:
     name: Plan
+    environment:
+      name: dev
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: dev
-      url: ${{ steps.output.outputs.url }}
     defaults:
       run:
         working-directory: ${{ env.TF_WORKING_DIR }}
