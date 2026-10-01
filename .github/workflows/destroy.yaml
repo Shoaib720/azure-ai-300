@@ -1,11 +1,15 @@
-name: Provision Infrastructure
+name: Teardown Infrastructure
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm teardown'
+        required: true
+        type: string
 
 permissions:
   contents: read
-  pull-requests: write # optional: lets you comment the plan on PRs later
 
 env:
   TF_WORKING_DIR: ./infra       # folder containing your .tf files
@@ -16,7 +20,9 @@ env:
 
 jobs:
   plan:
-    name: Plan
+    name: Plan Destroy
+    # safety guard: only runs if the user typed "destroy"
+    if: inputs.confirm == 'destroy'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,28 +37,25 @@ jobs:
       - name: Terraform init
         run: terraform init -input=false
 
-      - name: Terraform validate
-        run: terraform validate
-
-      - name: Terraform plan
-        run: terraform plan -input=false -out=tfplan
+      - name: Terraform plan (destroy)
+        run: terraform plan -destroy -input=false -out=tfplan-destroy
 
       - name: Plan summary
         run: |
-          echo '### Terraform plan' >> $GITHUB_STEP_SUMMARY
+          echo '### Terraform destroy plan :warning:' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          terraform show -no-color tfplan | tail -c 60000 >> $GITHUB_STEP_SUMMARY
+          terraform show -no-color tfplan-destroy | tail -c 60000 >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          name: tfplan-destroy
+          path: ${{ env.TF_WORKING_DIR }}/tfplan-destroy
           retention-days: 5
 
-  apply:
-    name: Apply
+  destroy:
+    name: Destroy
     needs: plan
     runs-on: ubuntu-latest
     environment:
@@ -70,11 +73,14 @@ jobs:
       - name: Download plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: tfplan-destroy
           path: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform init
         run: terraform init -input=false
 
-      - name: Terraform apply
-        run: terraform apply -input=false -auto-approve tfplan
+      - name: Terraform destroy
+        run: terraform apply -input=false -auto-approve tfplan-destroy
+
+      - name: Summary
+        run: echo "### Infrastructure destroyed :wastebasket:" >> $GITHUB_STEP_SUMMARY
