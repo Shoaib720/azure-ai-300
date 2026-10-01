@@ -69,7 +69,7 @@ resource "azurerm_subnet" "ml_subnet" {
 }
 
 resource "azurerm_machine_learning_compute_instance" "ml_compute_instance" {
-  name                          = "ml-ci-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}-${var.global_configs.suffix}"
+  name                          = "ml-ci-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}${var.global_configs.suffix}"
   machine_learning_workspace_id = azurerm_machine_learning_workspace.ml_workspace.id
   virtual_machine_size          = var.virtual_machine_size
   authorization_type            = "personal"
