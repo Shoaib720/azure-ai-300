@@ -52,3 +52,28 @@ resource "azurerm_machine_learning_workspace" "ml_workspace" {
 
   tags = local.tags
 }
+
+resource "azurerm_virtual_network" "ml_vnet" {
+  name                = "ml-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}${var.global_configs.suffix}"
+  address_space       = ["10.0.1.0/24"]
+  location            = var.global_configs.location
+  resource_group_name = azurerm_resource_group.ml_rg.name
+  tags = local.tags
+}
+
+resource "azurerm_subnet" "ml_subnet" {
+  name                 = "mlsnet-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}${var.global_configs.suffix}"
+  resource_group_name  = azurerm_resource_group.ml_rg.name
+  virtual_network_name = azurerm_virtual_network.ml_vnet.name
+  address_prefixes     = ["10.0.1.0/25"]
+}
+
+resource "azurerm_machine_learning_compute_instance" "ml_compute_instance" {
+  name                          = "mlworkspace-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}${var.global_configs.suffix}"
+  machine_learning_workspace_id = azurerm_machine_learning_workspace.ml_workspace.id
+  virtual_machine_size          = var.virtual_machine_size
+  authorization_type            = "personal"
+  node_public_ip_enabled = false
+  subnet_resource_id = azurerm_subnet.ml_subnet.id
+  tags = local.tags
+}
