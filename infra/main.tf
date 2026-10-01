@@ -73,7 +73,10 @@ resource "azurerm_machine_learning_compute_instance" "ml_compute_instance" {
   machine_learning_workspace_id = azurerm_machine_learning_workspace.ml_workspace.id
   virtual_machine_size          = var.virtual_machine_size
   authorization_type            = "personal"
-  node_public_ip_enabled = false
+  node_public_ip_enabled = true
+  ssh {
+    public_key = var.ssh_key
+  }
   subnet_resource_id = azurerm_subnet.ml_subnet.id
   tags = local.tags
 }
