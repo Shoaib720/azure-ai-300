@@ -1,0 +1,84 @@
+name: Terraform
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write # optional: lets you comment the plan on PRs later
+
+env:
+  TF_WORKING_DIR: ./infra       # folder containing your .tf files
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Plan summary
+        run: |
+          echo '### Terraform plan' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          terraform show -no-color tfplan | tail -c 60000 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 5
+
+  apply:
+    name: Apply
+    needs: plan
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ steps.output.outputs.url }}
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
