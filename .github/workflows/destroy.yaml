@@ -1,4 +1,4 @@
-name: Teardown Infrastructure
+name: Teardown Ephemeral Infrastructure
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  TF_WORKING_DIR: ./infra       # folder containing your .tf files
+  TF_WORKING_DIR: ./infra/ephemeral       # folder containing your .tf files
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

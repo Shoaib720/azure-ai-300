@@ -68,15 +68,25 @@ resource "azurerm_subnet" "ml_subnet" {
   address_prefixes     = ["10.0.1.0/25"]
 }
 
-resource "azurerm_machine_learning_compute_instance" "ml_compute_instance" {
-  name                          = "ml-ci-${lower(var.global_configs.project)}-${lower(var.global_configs.environment)}${var.global_configs.suffix}"
-  machine_learning_workspace_id = azurerm_machine_learning_workspace.ml_workspace.id
-  virtual_machine_size          = var.virtual_machine_size
-  authorization_type            = "personal"
-  node_public_ip_enabled = true
-  ssh {
-    public_key = var.ssh_key
-  }
-  subnet_resource_id = azurerm_subnet.ml_subnet.id
+resource "azurerm_storage_account" "ml_datastore_stgacc" {
+  name                     = "amldatastore${lower(var.global_configs.environment)}${var.global_configs.suffix}"
+  location                 = var.global_configs.location
+  resource_group_name      = azurerm_resource_group.ml_rg.name
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
   tags = local.tags
+}
+
+resource "azurerm_storage_container" "aml_raw_datasets_container" {
+  name                  = "raw"
+  storage_account_id = azurerm_storage_account.ml_datastore_stgacc.id
+  container_access_type = "private"
+}
+
+resource "azurerm_machine_learning_datastore_blobstorage" "ds_raw_blob" {
+  name                 = "aml_ds_raw"
+  workspace_id         = azurerm_machine_learning_workspace.ml_workspace.id
+  storage_container_id = azurerm_storage_container.aml_raw_datasets_container.id
+  account_key          = azurerm_storage_account.ml_datastore_stgacc.primary_access_key
+  is_default = true
 }

@@ -9,7 +9,7 @@ terraform {
     resource_group_name = "rg-mgmt"
     storage_account_name = "stgaccterraformartifacts"
     container_name = "tfstates"
-    key = "ml.dev.eastus.tfstate"
+    key = "ml.dev.ephemeral.eastus.tfstate"
   }
 }
 
